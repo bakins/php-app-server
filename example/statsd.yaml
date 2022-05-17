@@ -1,0 +1,10 @@
+mappings:
+  - match: "test.timing.*.*.*"
+    observer_type: histogram
+    histogram_options:
+      buckets: [ 0.01, 0.025, 0.05, 0.1 ]
+    name: "my_timer"
+    labels:
+      provider: "$2"
+      outcome: "$3"
+      job: "${1}_server"

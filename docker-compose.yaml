@@ -1,0 +1,52 @@
+version: "3"
+services:
+  frontend:
+    image: php-app-server
+    build: .
+    command:
+      - /frontend
+      - --filename=/app/example/index.php
+      - --target=tcp://phpfpm:9090
+      - --trace.endpoint=otel:4318
+      - --metrics.endpoint=otel:4318
+    ports:
+      - "8080:8080"
+    links:
+      - phpfpm
+      - otel
+  proxy:
+    image: php-app-server
+    build: .
+    command:
+      - /proxy
+    links:
+      - otel
+  otel:
+    image: otel/opentelemetry-collector-contrib:0.51.0
+    command:
+      - --config=/app/example/otel.yaml
+    volumes:
+      - .:/app
+  phpfpm:
+    image: php-fpm-sockets
+    build:
+      dockerfile: Dockerfile.php
+    command:
+      - php-fpm
+      - --fpm-config=/app/example/phpfpm.conf
+    volumes:
+      - .:/app
+    links:
+      - proxy
+      - otel
+      - statsd
+  statsd:
+    image: prom/statsd-exporter:v0.22.5
+    command:
+      - --statsd.listen-udp=:8125
+      - --statsd.listen-tcp=:8125
+      - --web.listen-address=:9102
+      - --statsd.mapping-config=/app/example/statsd.yaml
+      - --log.level=warn
+    volumes:
+      - .:/app
